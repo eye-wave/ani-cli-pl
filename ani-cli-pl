@@ -82,7 +82,7 @@ select_episode() {
 select_player() {
   local url="https://shinden.pl/$episode_url"
   local html=$(curl -s $url -H @$HEADER_FILE)
-  local matches=$(echo "$html" | sed 's/ /_/g' | grep -oE 'player_data_[0-9]+.+username')
+  local matches=$(echo "$html" | sed 's/&quot;/"/g' | sed 's/ /_/g' | grep -oE 'player_data_[0-9]+.+username')
   local players=""
 
   for match in $matches; do
@@ -131,4 +131,7 @@ if [ -z $player_url ]; then
   exit 1
 fi
 
-xdg-open "$player_url"
+case "$(uname -a)" in
+  *ndroid*) termux-open "$player_url" ;;
+  *) xdg-open "$player_url" ;;
+
