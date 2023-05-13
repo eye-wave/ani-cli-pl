@@ -1,6 +1,6 @@
 #!/bin/sh
 
-version_number="0.0.1"
+version_number="0.0.2"
 AUTH="X2d1ZXN0XzowLDUsMjEwMDAwMDAsMjU1LDQxNzQyOTM2NDQ%3D"
 COOKIE_JAR="$HOME/.cache/ani-cli-pl/cookies.txt"
 HEADER_FILE="$HOME/.cache/ani-cli-pl/headers.txt"
@@ -134,4 +134,4 @@ fi
 case "$(uname -a)" in
   *ndroid*) termux-open "$player_url" ;;
   *) xdg-open "$player_url" ;;
-
+esac
