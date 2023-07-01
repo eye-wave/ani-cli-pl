@@ -1,7 +1,5 @@
 <p align="center">
 <img src="https://img.shields.io/badge/os-linux-brightgreen">
-<img src="https://img.shields.io/badge/os-mac-red">
-<img src="https://img.shields.io/badge/os-windows-red">
 </p>
 
 <h3>
