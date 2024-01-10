@@ -123,20 +123,22 @@ get_video_link() {
 }
 
 open_url() {
-  url=$1
+  local url=$1
+  local os_name=$(uname -a)
 
   echo "Opening url: $url"
   
-  case $os_name in
-    "Linux")
-      xdg-open "$url" ;;
-    "Darwin")
-      open "$url" ;;
-    "CYGWIN"*|"MINGW"*|"MSYS"*)
-      start "$url" ;;
-    *)
-    echo "Unsupported operating system: $os_name" ;;
-  esac
+  if echo "$os_name" | grep -q "Linux"; then
+    xdg-open "$url"
+  elif echo "$os_name" | grep -q "Darwin"; then
+    open "$url"
+  elif echo "$os_name" | grep -Eq "CYGWIN|MINGW|MSYS"; then
+    start "$url"
+  elif echo "$os_name" | grep -q "Android"; then
+    termux-open-url "$url"
+  else
+    echo "Unsupported operating system: $os_name"
+  fi
 }
 
 while [ -z "$query" ]; do
