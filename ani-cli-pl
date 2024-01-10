@@ -1,13 +1,15 @@
 #!/bin/sh
 
-version_number="0.0.2"
+version_number="0.0.3"
 AUTH="X2d1ZXN0XzowLDUsMjEwMDAwMDAsMjU1LDQxNzQyOTM2NDQ%3D"
-COOKIE_JAR="$HOME/.cache/ani-cli-pl/cookies.txt"
-HEADER_FILE="$HOME/.cache/ani-cli-pl/headers.txt"
+COOKIE_JAR="/tmp/ani-cli-pl.cookies"
+HEADER_FILE="/tmp/ani-cli-pl.headers"
 
-if [ ! -f $(dirname $COOKIE_JAR) ]; then
-  mkdir -p $(dirname $COOKIE_JAR) || true
-fi
+quit() {
+  if [ $? -eq $1 ]; then
+    exit 1
+  fi
+}
 
 touch $COOKIE_JAR
 cat << EOF > "$HEADER_FILE"
@@ -49,6 +51,8 @@ search_anime() {
 
 select_anime() {
   selected_anime=$(echo $anime_entries | sed 's/ /\n/g' | sed -E 's/::.+//' | sed 's/_/ /g' | fzf --reverse )
+  quit 130
+
   selected_anime="$(echo $selected_anime | sed 's/ /_/g' )::"
 
   selected_anime=$(echo $anime_entries | sed 's/ /\n/g' | grep $selected_anime)
@@ -71,6 +75,8 @@ select_episode() {
   done
 
   local selected=$(echo $choices | grep -v '^$' | fzf --reverse )
+  quit 130
+
   selected=$(($n - $selected +1))
 
   episode_url=$(echo $matches | sed 's/ /\n/g' | sed -n "${selected}p")
@@ -93,6 +99,8 @@ select_player() {
   done
 
   selected_player=$(echo $players | fzf --reverse )
+  quit 130
+
   if [ -z $selected_player ]; then
     exit 1
   fi
@@ -114,7 +122,22 @@ get_video_link() {
   player_url="https:$(echo $response | sed -E 's/\&quot/"/g' | grep -oE '\/\/[^"]+' | head -n 1 | sed -E 's/\?.+//')"
 }
 
-trap "exit" INT
+open_url() {
+  url=$1
+
+  echo "Opening url: $url"
+  
+  case $os_name in
+    "Linux")
+      xdg-open "$url" ;;
+    "Darwin")
+      open "$url" ;;
+    "CYGWIN"*|"MINGW"*|"MSYS"*)
+      start "$url" ;;
+    *)
+    echo "Unsupported operating system: $os_name" ;;
+  esac
+}
 
 while [ -z "$query" ]; do
   printf "Search anime: " && read -r query
@@ -125,13 +148,4 @@ select_anime
 select_episode
 select_player
 get_video_link
-
-echo $player_url
-if [ -z $player_url ]; then
-  exit 1
-fi
-
-case "$(uname -a)" in
-  *ndroid*) termux-open "$player_url" ;;
-  *) xdg-open "$player_url" ;;
-esac
+open_url $player_url
