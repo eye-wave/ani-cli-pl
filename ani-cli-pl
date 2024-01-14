@@ -24,7 +24,7 @@ sec-fetch-site: same-origin
 sec-fetch-user: ?1
 sec-gpc: 1
 upgrade-insecure-requests: 1
-user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/97.0.4692.71 Safari/537.36
+user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.3
 EOF
 
 sed -i -E "s/cookie: _rnd=[0-9]+;/cookie: _rnd=$(date +%s);/" $HEADER_FILE
