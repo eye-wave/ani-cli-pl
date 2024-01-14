@@ -1,6 +1,6 @@
 #!/bin/sh
 
-version_number="0.0.3"
+version_number="0.0.4"
 AUTH="X2d1ZXN0XzowLDUsMjEwMDAwMDAsMjU1LDQxNzQyOTM2NDQ%3D"
 COOKIE_JAR="/tmp/ani-cli-pl.cookies"
 HEADER_FILE="/tmp/ani-cli-pl.headers"
