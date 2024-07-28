@@ -1,6 +1,6 @@
 #!/bin/sh
 
-version_number="0.0.4"
+version_number="0.1.0"
 AUTH="X2d1ZXN0XzowLDUsMjEwMDAwMDAsMjU1LDQxNzQyOTM2NDQ%3D"
 COOKIE_JAR="/tmp/ani-cli-pl.cookies"
 HEADER_FILE="/tmp/ani-cli-pl.headers"
@@ -14,7 +14,6 @@ quit() {
 touch $COOKIE_JAR
 cat << EOF > "$HEADER_FILE"
 accept-language: pl-PL,pl;q=0.9,en-US;q=0.8,en;q=0.7
-accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9
 cache-control: max-age=0
 cookie: _rnd=0000;
 referer: https://shinden.pl/
@@ -24,16 +23,31 @@ sec-fetch-site: same-origin
 sec-fetch-user: ?1
 sec-gpc: 1
 upgrade-insecure-requests: 1
-user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.3
+user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.3
 EOF
 
 sed -i -E "s/cookie: _rnd=[0-9]+;/cookie: _rnd=$(date +%s);/" $HEADER_FILE
 
+curl_cache() {
+  local url="$1"
+  local hash=$(echo $url | md5sum)
+  local path="/tmp/ani-cli-cache/html/$hash"
+
+  if [ -f "$path" ]; then
+    cat "$path" | gunzip
+  else
+    local html=$(curl -s "$url" -H @$HEADER_FILE -c $COOKIE_JAR)
+    mkdir -p $(dirname "$path")
+    
+    echo "$html" | gzip > "$path"
+    echo "$html"
+  fi
+}
+
 search_anime() {
   local query=$(echo "$1" | sed 's/ /+/g')
   local url="https://shinden.pl/series?search=$query&one_online=true"
-  local html=$(curl -s $url -H @$HEADER_FILE)
-  local regex='(series|titles).\d+[^"]+'
+  local html=$(curl_cache $url)
   local matches=$(echo "$html" | sed 's/ /_/g' | grep -oE '/(series|titles)/[0-9]+.+' )
 
   anime_entries=""
@@ -64,7 +78,7 @@ select_anime() {
 select_episode() {
   local query=$(echo $selected_anime | sed -E 's/.+:://')
   local url="https://shinden.pl$query/episodes"
-  local html=$(curl -s $url -H @$HEADER_FILE)
+  local html=$(curl_cache $url)
 
   local matches=$(echo "$html" | sed 's/ /_/g' | grep -oE 'episode\/[0-9]+[^"]+')
   local n=$(echo $matches | sed 's/ /\n/g' | wc -l )
@@ -87,7 +101,7 @@ select_episode() {
 
 select_player() {
   local url="https://shinden.pl/$episode_url"
-  local html=$(curl -s $url -H @$HEADER_FILE)
+  local html=$(curl_cache $url)
   local matches=$(echo "$html" | sed 's/&quot;/"/g' | sed 's/ /_/g' | grep -oE 'player_data_[0-9]+.+username')
   local players=""
 
@@ -108,22 +122,30 @@ select_player() {
 
 get_video_link() {
   local playerid=$(echo $selected_player | sed -E 's/.+://')
+  local path="/tmp/ani-cli-cache/playerid/$playerid"
 
-  local url1="https://api4.shinden.pl/xhr/${playerid}/player_load?auth=${AUTH}"
-  local url2="https://api4.shinden.pl/xhr/${playerid}/player_show?auth=${AUTH}&width=0&height=-1"
-  
-  local html=$(curl -s $url1 -H @$HEADER_FILE -c $COOKIE_JAR)
-  for i in $(seq 5 -1 1); do
-    echo "${i} seconds remaining..."
-    sleep 1
-  done
+  if [ -f "$path" ]; then
+    player_url=$(cat "$path")
+  else
+    local url1="https://api4.shinden.pl/xhr/${playerid}/player_load?auth=${AUTH}"
+    local url2="https://api4.shinden.pl/xhr/${playerid}/player_show?auth=${AUTH}&width=0&height=-1"
+    
+    local html=$(curl -s $url1 -H @$HEADER_FILE -c $COOKIE_JAR)
+    for i in $(seq 5 -1 1); do
+      echo "${i} seconds remaining..."
+      sleep 1
+    done
 
-  response=$(curl -s -X GET $url2 -H @$HEADER_FILE -b $COOKIE_JAR)
-  player_url="https:$(echo $response | sed -E 's/\&quot/"/g' | grep -oE '\/\/[^"]+' | head -n 1 | sed -E 's/\?.+//')"
+    response=$(curl -s -X GET $url2 -H @$HEADER_FILE -b $COOKIE_JAR)
+    player_url="https:$(echo $response | sed -E 's/\&quot/"/g' | grep -oE '\/\/[^"]+' | head -n 1 | sed -E 's/\?.+//')"
+
+    mkdir -p $(dirname "$path")
+    echo $player_url > "$path"
+  fi
 }
 
 open_url() {
-  local url=$1
+  local url="$1"
   local os_name=$(uname -a)
 
   echo "Opening url: $url"

@@ -2,9 +2,6 @@
 
 ![Static Badge](https://img.shields.io/badge/linux-gray?style=for-the-badge&logo=linux&logoColor=fff&label=os&color=darklime)
 ![Static Badge](https://img.shields.io/badge/android-gray?style=for-the-badge&logo=android&logoColor=fff&label=os&color=darklime)
-![Static Badge](https://img.shields.io/badge/windows-gray?style=for-the-badge&logo=windows&logoColor=fff&label=os&color=yellow)
-![Static Badge](https://img.shields.io/badge/osx-gray?style=for-the-badge&logo=apple&logoColor=fff&label=os&color=lightgray)
-![Static Badge](https://img.shields.io/badge/ios-gray?style=for-the-badge&logo=apple&logoColor=fff&label=os&color=lightgray)
 
 ![Static Badge](https://img.shields.io/badge/bash-4EAA25?style=for-the-badge&logo=gnubash&logoColor=fff)
 ![Static Badge](https://img.shields.io/github/license/eye-wave/ani-cli-pl?style=for-the-badge)
@@ -14,14 +11,15 @@
 </div>
 
 
-Cli tool to watch anime with polish subtitles mainly from
-<a href="https://shinden.pl">shinden.pl</a>
+Cli tool to watch anime with polish subtitles mainly from [shinden.pl](https://shinden.pl).
+
+Written in Bourne shell for wider compatability with various operating systems.
 
 ### Getting Started
 
 Install required dependencies:
 ```
-curl grep sed fzf
+curl fzf grep gunzip gzip md5sum sed
 ```
 
 Download the script
@@ -39,3 +37,10 @@ To uninstall simply run the following
 ```
 rm ~/.local/bin/ani-cli-pl
 ```
+
+### Todo
+- [ ] Better closing with <kbd>Ctrl</kbd>+<kbd>C</kbd>
+- [ ] Better caching
+- [ ] Cli flags
+- [ ] Help menu
+- [ ] Test compatibility on Windows with Git Bash
