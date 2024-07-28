@@ -39,7 +39,7 @@ rm ~/.local/bin/ani-cli-pl
 ```
 
 ### Todo
-- [ ] Better closing with <kbd>Ctrl</kbd>+<kbd>C</kbd>
+- [x] Better closing with <kbd>Ctrl</kbd>+<kbd>C</kbd>
 - [ ] Better caching
 - [ ] Cli flags
 - [ ] Help menu

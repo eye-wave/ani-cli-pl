@@ -1,12 +1,41 @@
 #!/bin/sh
 
-version_number="0.1.0"
+version_number="0.1.1"
+
 AUTH="X2d1ZXN0XzowLDUsMjEwMDAwMDAsMjU1LDQxNzQyOTM2NDQ%3D"
-COOKIE_JAR="/tmp/ani-cli-pl.cookies"
-HEADER_FILE="/tmp/ani-cli-pl.headers"
+os_name=$(uname -a)
+
+if echo "$os_name" | grep -iq "linux"; then
+  open_url="xdg-open"
+  CACHE_PATH="$HOME/.cache/ani-cli-pl"
+
+elif echo "$os_name" | grep -q "Darwin"; then
+  open_url="open"
+  CACHE_PATH="$HOME/Library/Caches/ani-cli-pl"
+
+elif echo "$os_name" | grep -Eq "CYGWIN|MINGW|MSYS"; then
+  open_url="start"
+  CACHE_PATH="$APPDATA/ani-cli-pl"
+
+elif echo "$os_name" | grep -q "Android"; then
+  open_url="termux-open-url"
+  CACHE_PATH="$HOME/.cache/ani-cli-pl"
+
+else
+  echo "Unsupported operating system: $os_name"
+  exit 1
+fi
+
+COOKIE_JAR="$CACHE_PATH/ani-cli-pl.cookies"
+HEADER_FILE="$CACHE_PATH/ani-cli-pl.headers"
+
+mkdir -p "$CACHE_PATH"
 
 quit() {
-  if [ $? -eq $1 ]; then
+  local previous_code="$?"
+  local expected_code="$1"
+
+  if [ "$previous_code" = "$expected_code" ]; then
     exit 1
   fi
 }
@@ -31,7 +60,7 @@ sed -i -E "s/cookie: _rnd=[0-9]+;/cookie: _rnd=$(date +%s);/" $HEADER_FILE
 curl_cache() {
   local url="$1"
   local hash=$(echo $url | md5sum)
-  local path="/tmp/ani-cli-cache/html/$hash"
+  local path="$CACHE_PATH/html/$hash"
 
   if [ -f "$path" ]; then
     cat "$path" | gunzip
@@ -60,23 +89,23 @@ search_anime() {
     anime_entries="$anime_entries\n$entry"
   done
 
-  anime_entries=$(echo $anime_entries | sort)
+  anime_entries=$(echo "$anime_entries" | sort)
 }
 
 select_anime() {
-  selected_anime=$(echo $anime_entries | sed 's/ /\n/g' | sed -E 's/::.+//' | sed 's/_/ /g' | fzf --reverse )
+  selected_anime=$(echo "$anime_entries" | sed 's/ /\n/g' | sed -E 's/::.+//' | sed 's/_/ /g' | fzf --reverse )
   quit 130
 
-  selected_anime="$(echo $selected_anime | sed 's/ /_/g' )::"
+  selected_anime="$(echo "$selected_anime" | sed 's/ /_/g' )::"
 
-  selected_anime=$(echo $anime_entries | sed 's/ /\n/g' | grep $selected_anime)
-  if [ -z $selected_anime ]; then
+  selected_anime=$(echo "$anime_entries" | sed 's/ /\n/g' | grep "$selected_anime")
+  if [ -z "$selected_anime" ]; then
     exit 1
   fi
 }
 
 select_episode() {
-  local query=$(echo $selected_anime | sed -E 's/.+:://')
+  local query=$(echo "$selected_anime" | sed -E 's/.+:://')
   local url="https://shinden.pl$query/episodes"
   local html=$(curl_cache $url)
 
@@ -88,12 +117,16 @@ select_episode() {
     choices="$choices$i\n"
   done
 
-  local selected=$(echo $choices | grep -v '^$' | fzf --reverse )
+  local selected=$(echo "$choices" | grep -v '^$' | fzf --reverse )
   quit 130
+  # this check is necessary because for some reason fzf returns 0 instead of 130 on CTRL+C here and only here
+  if [ -z "$selected" ]; then
+    exit 1
+  fi
 
   selected=$(($n - $selected +1))
 
-  episode_url=$(echo $matches | sed 's/ /\n/g' | sed -n "${selected}p")
+  episode_url=$(echo "$matches" | sed 's/ /\n/g' | sed -n "${selected}p")
   if [ -z $selected ]; then
     exit 1
   fi
@@ -106,13 +139,13 @@ select_player() {
   local players=""
 
   for match in $matches; do
-    local player_id=$(echo $match | sed -E 's/".+//' | sed -E 's/[^0-9]//g')
-    local player_name=$(echo $match | sed -E 's/.+player":"//' | sed -E 's/".+//')
+    local player_id=$(echo "$match" | sed -E 's/".+//' | sed -E 's/[^0-9]//g')
+    local player_name=$(echo "$match" | sed -E 's/.+player":"//' | sed -E 's/".+//')
 
     players="$players\n$player_name::$player_id"
   done
 
-  selected_player=$(echo $players | fzf --reverse )
+  selected_player=$(echo "$players" | fzf --reverse )
   quit 130
 
   if [ -z $selected_player ]; then
@@ -122,7 +155,7 @@ select_player() {
 
 get_video_link() {
   local playerid=$(echo $selected_player | sed -E 's/.+://')
-  local path="/tmp/ani-cli-cache/playerid/$playerid"
+  local path="$CACHE_PATH/playerid/$playerid"
 
   if [ -f "$path" ]; then
     player_url=$(cat "$path")
@@ -144,25 +177,6 @@ get_video_link() {
   fi
 }
 
-open_url() {
-  local url="$1"
-  local os_name=$(uname -a)
-
-  echo "Opening url: $url"
-  
-  if echo "$os_name" | grep -q "Linux"; then
-    xdg-open "$url"
-  elif echo "$os_name" | grep -q "Darwin"; then
-    open "$url"
-  elif echo "$os_name" | grep -Eq "CYGWIN|MINGW|MSYS"; then
-    start "$url"
-  elif echo "$os_name" | grep -q "Android"; then
-    termux-open-url "$url"
-  else
-    echo "Unsupported operating system: $os_name"
-  fi
-}
-
 while [ -z "$query" ]; do
   printf "Search anime: " && read -r query
 done
@@ -172,4 +186,4 @@ select_anime
 select_episode
 select_player
 get_video_link
-open_url $player_url
+"$open_url" $player_url
